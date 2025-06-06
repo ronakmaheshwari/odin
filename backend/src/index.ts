@@ -7,10 +7,11 @@ import { TextBlock } from "@anthropic-ai/sdk/resources";
 import fs from "fs";
 import z from "zod"
 import ReactBasePrompt from "./defaults/react.js";
-import { BASE_PROMPT } from "./prompts.js";
+import { BASE_PROMPT, getSystemPrompt } from "./prompts.js";
 import nodeBasePrompt from "./defaults/node.js";
 import AstroBasePrompt from "./defaults/astro.js";
 import NextBasePrompt from "./defaults/next.js";
+import { log } from "console";
 
 dotenv.config();
 
@@ -75,6 +76,21 @@ app.post("/template", async (req: any, res: any) => {
     }
 
     return res.status(403).json({ message: "You can't access this." });
+});
+
+app.post("/chat",async(req:any,res:any)=>{
+  const messages = req.body.messages;
+  const tokenResult = await tokenChecker(messages);
+  const tokens = (tokenResult as any)?.total_tokens ?? 8000;
+  console.log(tokens);
+  const response = await anthropic.messages.stream({
+        messages:  messages,
+        model: "claude-opus-4-20250514",
+        max_tokens: tokens,
+        system: getSystemPrompt(),
+    }).on('text', (text) => {
+    console.log(text);
+  });
 });
 
 app.listen(port, () => {
